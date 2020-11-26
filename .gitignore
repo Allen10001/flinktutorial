@@ -1,3 +1,5 @@
 .idea
 target
 *.iml
+derby.log
+dependency-reduced-pom.xml

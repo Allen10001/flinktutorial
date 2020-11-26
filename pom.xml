@@ -8,23 +8,169 @@
     <artifactId>flinktutorial</artifactId>
     <version>1.0-SNAPSHOT</version>
 
+    <properties>
+        <flink.version>1.11.2</flink.version>
+        <scala.binary.version>2.11</scala.binary.version>
+    </properties>
+
     <dependencies>
+
+        <!--flink java begin-->
+        <!-- Apache Flink dependencies -->
+        <!-- These dependencies are provided, because they should not be packaged into the JAR file. -->
+        <dependency>
+            <groupId>org.apache.flink</groupId>
+            <artifactId>flink-java</artifactId>
+            <version>${flink.version}</version>
+            <!--<scope>provided</scope>-->
+        </dependency>
+        <dependency>
+            <groupId>org.apache.flink</groupId>
+            <artifactId>flink-streaming-java_${scala.binary.version}</artifactId>
+            <version>${flink.version}</version>
+            <!--<scope>provided</scope>-->
+        </dependency>
+        <!--flink java end-->
+
+        <!--flink scala begin-->
         <dependency>
             <groupId>org.apache.flink</groupId>
             <artifactId>flink-scala_2.11</artifactId>
-            <version>1.10.1</version>
+            <version>${flink.version}</version>
         </dependency>
         <!-- https://mvnrepository.com/artifact/org.apache.flink/flink-streaming-scala -->
         <dependency>
             <groupId>org.apache.flink</groupId>
             <artifactId>flink-streaming-scala_2.11</artifactId>
-            <version>1.10.1</version>
+            <version>${flink.version}</version>
+        </dependency>
+        <!--flink scala end-->
+
+        <!-- runtime-web dependency is need to start web UI from IDE -->
+        <dependency>
+            <groupId>org.apache.flink</groupId>
+            <artifactId>flink-runtime-web_${scala.binary.version}</artifactId>
+            <version>${flink.version}</version>
+           <!-- <scope>provided</scope>-->
+        </dependency>
+
+        <!-- queryable-state dependencies are needed for respective examples -->
+        <dependency>
+            <groupId>org.apache.flink</groupId>
+            <artifactId>flink-queryable-state-runtime_${scala.binary.version}</artifactId>
+            <version>${flink.version}</version>
         </dependency>
         <dependency>
             <groupId>org.apache.flink</groupId>
-            <artifactId>flink-connector-kafka-0.11_2.11</artifactId>
-            <version>1.10.1</version>
+            <artifactId>flink-queryable-state-client-java</artifactId>
+            <version>${flink.version}</version>
         </dependency>
+
+        <!--
+                Derby is used for a sink connector example.
+                Example only works in local mode, i.e, it is not possible to submit it to a running cluster.
+                The dependency is set to provided to reduce the size of the JAR file.
+                -->
+        <dependency>
+            <groupId>org.apache.derby</groupId>
+            <artifactId>derby</artifactId>
+            <version>10.13.1.1</version>
+            <scope>provided</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>org.apache.flink</groupId>
+            <artifactId>flink-connector-kafka-0.11_2.11</artifactId>
+            <version>${flink.version}</version>
+        </dependency>
+
+        <!-- Logging -->
+        <dependency>
+            <groupId>org.slf4j</groupId>
+            <artifactId>slf4j-log4j12</artifactId>
+            <version>1.7.25</version>
+            <scope>runtime</scope>
+        </dependency>
+        <dependency>
+            <groupId>log4j</groupId>
+            <artifactId>log4j</artifactId>
+            <version>1.2.17</version>
+            <scope>runtime</scope>
+        </dependency>
+
+        <!--
+        Table API and SQL:
+        https://ci.apache.org/projects/flink/flink-docs-release-1.11/dev/table/
+        BEGIN
+        -->
+
+        <!--Table Program Dependencies
+        Depending on the target programming language, you need to add the Java or Scala API to a
+        project in order to use the Table API & SQL for defining pipelines:
+        -->
+        <!-- Either... -->
+        <dependency>
+            <groupId>org.apache.flink</groupId>
+            <artifactId>flink-table-api-java-bridge_2.11</artifactId>
+            <version>${flink.version}</version>
+            <scope>provided</scope>
+        </dependency>
+        <!-- or... -->
+        <dependency>
+            <groupId>org.apache.flink</groupId>
+            <artifactId>flink-table-api-scala-bridge_2.11</artifactId>
+            <version>${flink.version}</version>
+            <scope>provided</scope>
+        </dependency>
+
+        <!--
+        Additionally, if you want to run the Table API & SQL programs locally
+        within your IDE, you must add one of the following set of modules, depending which planner you want to use:
+        -->
+        <!-- Either... (for the old planner that was available before Flink 1.9) -->
+        <dependency>
+            <groupId>org.apache.flink</groupId>
+            <artifactId>flink-table-planner_2.11</artifactId>
+            <version>${flink.version}</version>
+            <scope>provided</scope>
+        </dependency>
+        <!-- or.. (for the new Blink planner) -->
+        <dependency>
+            <groupId>org.apache.flink</groupId>
+            <artifactId>flink-table-planner-blink_2.11</artifactId>
+            <version>${flink.version}</version>
+            <scope>provided</scope>
+        </dependency>
+
+        <!--Extension Dependencies
+        If you want to implement a custom format for interacting with Kafka or a set of user-defined functions,
+        the following dependency is sufficient and can be used for JAR files for the SQL Client:-->
+        <dependency>
+            <groupId>org.apache.flink</groupId>
+            <artifactId>flink-table-common</artifactId>
+            <version>${flink.version}</version>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.kafka</groupId>
+            <artifactId>kafka_2.11</artifactId>
+            <version>2.0.0</version>
+        </dependency>
+
+        <!--
+        Table API and SQL:
+        https://ci.apache.org/projects/flink/flink-docs-release-1.11/dev/table/
+
+        END
+        -->
+
+        <dependency>
+            <groupId>org.apache.flink</groupId>
+            <artifactId>flink-json</artifactId>
+            <version>${flink.version}</version>
+        </dependency>
+
+
     </dependencies>
 
     <build>
@@ -53,8 +199,10 @@
             <executions>
                 <execution>
                     <id>make-assembly</id>
-                    <phase>package</phase> <goals>
-                    <goal>single</goal> </goals>
+                    <phase>package</phase>
+                    <goals>
+                    <goal>single</goal>
+                    </goals>
                 </execution>
             </executions>
         </plugin>
