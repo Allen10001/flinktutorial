@@ -26,7 +26,7 @@ public class SensorSource extends RichParallelSourceFunction<SensorReading> {
         List<Tuple2<String, Double>> curFTempList = Lists.newArrayList();
 
         // initialize sensor ids and temperatures
-        for(int i =1; i< 11; i++){
+        for(int i =1; i< 6; i++){
             Tuple2<String, Double> curFTempItem = new Tuple2<>("sensor_"+(taskIdx*10+i), 65 + (random.nextGaussian()*20));
             curFTempList.add(curFTempItem);
         }
@@ -41,7 +41,7 @@ public class SensorSource extends RichParallelSourceFunction<SensorReading> {
             Long cur = Calendar.getInstance().getTimeInMillis();
             curFTempList.forEach(t -> ctx.collect(new SensorReading(t.f0, cur, t.f1)));
 
-            Thread.sleep(100);
+            Thread.sleep(800);
         }
     }
 
