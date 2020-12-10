@@ -1,4 +1,4 @@
-package com.tv.streamwithflink.chapter06;
+package com.tv.streamwithflink.chpt06;
 
 import com.tv.streamwithflink.bean.SensorReading;
 import com.tv.streamwithflink.util.SensorSource;
@@ -8,7 +8,6 @@ import org.apache.flink.api.common.state.ValueState;
 import org.apache.flink.api.common.state.ValueStateDescriptor;
 import org.apache.flink.api.common.typeinfo.Types;
 import org.apache.flink.api.common.typeutils.TypeSerializer;
-import org.apache.flink.api.java.tuple.Tuple4;
 import org.apache.flink.api.java.tuple.Tuple5;
 import org.apache.flink.streaming.api.TimeCharacteristic;
 import org.apache.flink.streaming.api.datastream.DataStream;
@@ -45,7 +44,7 @@ public class CustomWindow {
         env.setStreamTimeCharacteristic(TimeCharacteristic.EventTime);
 
         env.getConfig().setAutoWatermarkInterval(1000L);
-        env.setParallelism(1);
+        // env.setParallelism(1);
 
         DataStream<SensorReading> sensorData = env
                 .addSource(new SensorSource())
@@ -87,6 +86,11 @@ public class CustomWindow {
             return Collections.singletonList(new TimeWindow(startTime, endTime));
         }
 
+        /**
+         * 返回默认的触发器，默认的触发器只在没有显示指定触发器的情况下起作用
+         * @param env
+         * @return
+         */
         @Override
         public Trigger<Object, TimeWindow> getDefaultTrigger(StreamExecutionEnvironment env) {
             return EventTimeTrigger.create();
@@ -124,12 +128,32 @@ public class CustomWindow {
             return TriggerResult.CONTINUE;
         }
 
+        /**
+         * 当使用触发器上下文设置的处理时间计时器触发时调用。
+         * Called when a processing-time timer that was set using the trigger context fires.
+         * @param time
+         * @param window
+         * @param ctx
+         * @return
+         * @throws Exception
+         */
         @Override
         public TriggerResult onProcessingTime(long time, TimeWindow window, TriggerContext ctx) throws Exception {
             // Continue. We don't use processing time timers
             return TriggerResult.CONTINUE;
         }
 
+        /**
+         * 任务内部的时间服务（time service）会维护一些计时器（timer），他们依靠接收到的水位线来激活。
+         * 1. 基于水位线记录的时间戳更新内部时间时钟。
+         * 2. 任务的时间服务会找到所有触发时间小于更新后事件时间时钟的计时器。对于每个到期的计时器，调用回调函数（onEventTime 或者 onProcessingTime），利用它来执行计算或发出记录。
+         * 3. 任务根据更新后事件时间时钟，将水位线发出。
+         * @param time
+         * @param window
+         * @param ctx
+         * @return
+         * @throws Exception
+         */
         @Override
         public TriggerResult onEventTime(long time, TimeWindow window, TriggerContext ctx) throws Exception {
             if(time == window.getEnd()){
@@ -139,7 +163,7 @@ public class CustomWindow {
                 // register next early firing timer
                 long temp = ctx.getCurrentWatermark() + (1000 - (ctx.getCurrentWatermark() % 1000));
                 if(temp < window.getEnd()){
-                    ctx.registerEventTimeTimer(temp);
+                    ctx.registerEventTimeTimer(temp);  // 注册一个计时器
                 }
                 // fire trigger to early evaluate window
                 return TriggerResult.FIRE;
