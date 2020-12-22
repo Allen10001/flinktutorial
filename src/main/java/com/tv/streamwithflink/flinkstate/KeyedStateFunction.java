@@ -55,14 +55,11 @@ public class KeyedStateFunction {
 
     }
 
-
-
-
 }
 
 class TemperatureAlertFunction extends RichFlatMapFunction<SensorReading ,Tuple3<String, Double, Double>>{
 
-    // 创建状态引用对象
+    // 创建状态引用对象, 状态引用对象只是提供访问状态的接口，而不会存储状态本身，具体保存工作由状态后端完成
     private ValueState<Double> lastTempState;
     // 阈值
     private Double threshold;
