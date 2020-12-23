@@ -1,4 +1,4 @@
-package com.tv.streamwithflink.chpt06;
+package com.tv.streamwithflink.window;
 
 import com.tv.streamwithflink.bean.SensorReading;
 import com.tv.streamwithflink.util.SensorSource;
