@@ -9,6 +9,7 @@ import org.apache.flink.api.common.state.ListStateDescriptor;
 import org.apache.flink.api.common.state.ValueState;
 import org.apache.flink.api.common.state.ValueStateDescriptor;
 import org.apache.flink.api.common.typeinfo.TypeInformation;
+import org.apache.flink.runtime.state.CheckpointListener;
 import org.apache.flink.runtime.state.FunctionInitializationContext;
 import org.apache.flink.runtime.state.FunctionSnapshotContext;
 import org.apache.flink.streaming.api.TimeCharacteristic;
@@ -22,7 +23,6 @@ import scala.Tuple3;
 import java.io.IOException;
 import java.time.Duration;
 import java.util.Iterator;
-import java.util.List;
 
 /**
  * @Description
@@ -61,25 +61,26 @@ public class CheckpointedFunction007 {
     }
 }
 
-class CheckpointFunctionHighTempCounter implements FlatMapFunction<SensorReading, Tuple3<String, Long, Long>>, CheckpointedFunction{
+class CheckpointFunctionHighTempCounter
+        implements FlatMapFunction<SensorReading, Tuple3<String, Long, Long>>,
+        CheckpointedFunction,
+        CheckpointListener {
 
     private Double threshold;
-
-    public CheckpointFunctionHighTempCounter(Double threshold) {
-        this.threshold = threshold;
-    }
-
     // 初始化本地存储当前算子实例高温元素的数量
-    private Long opHighTempCnt=0L;
+    private Long opHighTempCnt = 0L;
     // 算子状态，    使用状态列表，  存储当前算子实例高温元素的数量
     private ListState<Long> opCntState;
     // 键值分区状态，    使用单值状态 存储当前元素的键值对应高温元素的数量
     private ValueState<Long> keyedCntState;
+    public CheckpointFunctionHighTempCounter(Double threshold) {
+        this.threshold = threshold;
+    }
 
     @Override
     public void flatMap(SensorReading value, Collector<Tuple3<String, Long, Long>> out) throws Exception {
-        if(value.getTemperature() > threshold){
-            opHighTempCnt +=1;
+        if (value.getTemperature() > threshold) {
+            opHighTempCnt += 1;
 
             /**
              * org.apache.flink.api.common.state.ValueState#value()
@@ -99,7 +100,7 @@ class CheckpointFunctionHighTempCounter implements FlatMapFunction<SensorReading
              *
              * @throws IOException Thrown if the system cannot access the state.
              */
-            Long keyedCnt = keyedCntState.value()+1;
+            Long keyedCnt = keyedCntState.value() + 1;
             keyedCntState.update(keyedCnt);
 
             out.collect(new Tuple3<>(value.getId(), keyedCnt, opHighTempCnt));
@@ -114,11 +115,29 @@ class CheckpointFunctionHighTempCounter implements FlatMapFunction<SensorReading
 
     @Override
     public void initializeState(FunctionInitializationContext context) throws Exception {
-        // 初始化算子状态     当前算子实例分得的 cnt 状态列表   getOperatorStateStore
+        // 初始化算子状态     当前算子实例分得的 cnt 状态列表   getOperatorStateStore  ，
+        // 获取任务启动时，当前算子任务获取到的列表状态
         opCntState = context.getOperatorStateStore().getListState(
                 new ListStateDescriptor<Long>("opCnt", TypeInformation.of(Long.class)));
+        /**
+         * org.apache.flink.api.common.state.AppendingState#get()
+         *
+         * Returns the current value for the state. When the state is not
+         * partitioned the returned value is the same for all inputs in a given
+         * operator instance. If state partitioning is applied, the value returned
+         * depends on the current operator input, as the operator maintains an
+         * independent state for each partition.
+         *
+         * <p><b>NOTE TO IMPLEMENTERS:</b> if the state is empty, then this method
+         * should return {@code null}.
+         *
+         * @return The operator state value corresponding to the current input or {@code null}
+         * if the state is empty.
+         *
+         * @throws Exception Thrown if the system cannot access the state.
+         */
         Iterator<Long> opCntIterator = opCntState.get().iterator();
-        while(opCntIterator.hasNext()){
+        while (opCntIterator.hasNext()) {
             // 初始化本地存储的高温元素的数量
             opHighTempCnt += opCntIterator.next();
         }
@@ -126,5 +145,15 @@ class CheckpointFunctionHighTempCounter implements FlatMapFunction<SensorReading
         // 初始化键值分区状态   getKeyedStateStore
         keyedCntState = context.getKeyedStateStore().getState(
                 new ValueStateDescriptor<Long>("keyedCnt", TypeInformation.of(Long.class), 0L));
+    }
+
+    /**
+     * CheckpointListener 接口中的方法使用示例
+     * @param checkpointId
+     * @throws Exception
+     */
+    @Override
+    public void notifyCheckpointComplete(long checkpointId) throws Exception {
+        System.out.println("Create checkpoint success, checkpoint id:  " + checkpointId);
     }
 }
