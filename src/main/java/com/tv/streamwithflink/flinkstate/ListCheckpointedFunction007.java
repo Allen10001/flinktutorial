@@ -32,7 +32,7 @@ public class ListCheckpointedFunction007 {
 
         env.setStreamTimeCharacteristic(TimeCharacteristic.EventTime);
         env.getCheckpointConfig().setCheckpointInterval(5 * 1000);
-        env.getConfig().setAutoWatermarkInterval(10);
+        env.getConfig().setAutoWatermarkInterval(10_000);
         env.setParallelism(8);
         DataStream<SensorReading> originSource = env.addSource(new SensorSource());
 
