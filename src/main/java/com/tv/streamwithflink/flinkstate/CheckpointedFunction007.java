@@ -35,7 +35,13 @@ public class CheckpointedFunction007 {
         StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
 
         env.setStreamTimeCharacteristic(TimeCharacteristic.EventTime);
-        env.getCheckpointConfig().setCheckpointInterval(5_000L);
+
+        /**
+         * 下面两行含义相同
+         */
+        // env.getCheckpointConfig().setCheckpointInterval(5_000L);
+        env.enableCheckpointing(5_000L);
+
         env.getConfig().setAutoWatermarkInterval(10_000L);
         DataStream<SensorReading> originSource = env.addSource(new SensorSource());
 
@@ -48,7 +54,9 @@ public class CheckpointedFunction007 {
         KeyedStream<SensorReading, String> keyedSensorData = sensorData.keyBy(value -> value.getId());
 
         DataStream<Tuple3<String, Long, Long>> alerts = keyedSensorData
-                .flatMap(new CheckpointFunctionHighTempCounter(20.0));
+                .flatMap(new CheckpointFunctionHighTempCounter(20.0))
+                .uid("flatMap001")  // 设置算子标志
+                .setMaxParallelism(128);   // 设置最大并行度
 
         alerts.print();
 
