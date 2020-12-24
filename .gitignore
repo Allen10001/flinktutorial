@@ -2,4 +2,5 @@
 target
 *.iml
 derby.log
+temp/*
 dependency-reduced-pom.xml

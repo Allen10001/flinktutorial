@@ -4,14 +4,18 @@ import com.tv.streamwithflink.bean.SensorReading;
 import com.tv.streamwithflink.util.SensorSource;
 import org.apache.flink.api.common.eventtime.WatermarkStrategy;
 import org.apache.flink.api.common.functions.FlatMapFunction;
+import org.apache.flink.api.common.restartstrategy.RestartStrategies;
 import org.apache.flink.api.common.state.ListState;
 import org.apache.flink.api.common.state.ListStateDescriptor;
 import org.apache.flink.api.common.state.ValueState;
 import org.apache.flink.api.common.state.ValueStateDescriptor;
+import org.apache.flink.api.common.time.Time;
 import org.apache.flink.api.common.typeinfo.TypeInformation;
+import org.apache.flink.contrib.streaming.state.RocksDBStateBackend;
 import org.apache.flink.runtime.state.CheckpointListener;
 import org.apache.flink.runtime.state.FunctionInitializationContext;
 import org.apache.flink.runtime.state.FunctionSnapshotContext;
+import org.apache.flink.runtime.state.StateBackend;
 import org.apache.flink.streaming.api.TimeCharacteristic;
 import org.apache.flink.streaming.api.checkpoint.CheckpointedFunction;
 import org.apache.flink.streaming.api.datastream.DataStream;
@@ -23,6 +27,7 @@ import scala.Tuple3;
 import java.io.IOException;
 import java.time.Duration;
 import java.util.Iterator;
+import java.util.concurrent.TimeUnit;
 
 /**
  * @Description
@@ -35,12 +40,27 @@ public class CheckpointedFunction007 {
         StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
 
         env.setStreamTimeCharacteristic(TimeCharacteristic.EventTime);
+        env.setParallelism(4);
 
+        // 配置重启策略
+        env.setRestartStrategy(
+                RestartStrategies
+                        .fixedDelayRestart(3, Time.of(20, TimeUnit.SECONDS)));
         /**
          * 下面两行含义相同
          */
         // env.getCheckpointConfig().setCheckpointInterval(5_000L);
         env.enableCheckpointing(5_000L);
+
+        try {
+            // 设置状态后端
+            String checkpointPath = "file:///Users/allen/bigdataapp/flinktutorial/temp";
+            StateBackend backend = new RocksDBStateBackend(checkpointPath);
+            env.setStateBackend(backend);
+
+        } catch (IOException ioe) {
+            ioe.printStackTrace();
+        }
 
         env.getConfig().setAutoWatermarkInterval(10_000L);
         DataStream<SensorReading> originSource = env.addSource(new SensorSource());
@@ -81,6 +101,7 @@ class CheckpointFunctionHighTempCounter
     private ListState<Long> opCntState;
     // 键值分区状态，    使用单值状态 存储当前元素的键值对应高温元素的数量
     private ValueState<Long> keyedCntState;
+
     public CheckpointFunctionHighTempCounter(Double threshold) {
         this.threshold = threshold;
     }
@@ -119,6 +140,7 @@ class CheckpointFunctionHighTempCounter
     public void snapshotState(FunctionSnapshotContext context) throws Exception {
         opCntState.clear();
         opCntState.add(opHighTempCnt);
+        System.out.println("SnapshotState has been involved");
     }
 
     @Override
@@ -153,10 +175,13 @@ class CheckpointFunctionHighTempCounter
         // 初始化键值分区状态   getKeyedStateStore
         keyedCntState = context.getKeyedStateStore().getState(
                 new ValueStateDescriptor<Long>("keyedCnt", TypeInformation.of(Long.class), 0L));
+
+        System.out.println("InitializeState has been involved");
     }
 
     /**
      * CheckpointListener 接口中的方法使用示例
+     *
      * @param checkpointId
      * @throws Exception
      */
