@@ -4,6 +4,7 @@ import com.tv.streamwithflink.bean.SensorReading;
 import com.tv.streamwithflink.util.SensorSource;
 import org.apache.flink.api.common.eventtime.WatermarkStrategy;
 import org.apache.flink.api.common.functions.RichFlatMapFunction;
+import org.apache.flink.api.common.state.State;
 import org.apache.flink.api.common.state.ValueState;
 import org.apache.flink.api.common.state.ValueStateDescriptor;
 import org.apache.flink.api.common.typeinfo.TypeInformation;
@@ -59,6 +60,21 @@ public class KeyedStateFunction {
 
 class TemperatureAlertFunction extends RichFlatMapFunction<SensorReading ,Tuple3<String, Double, Double>>{
 
+    /**
+     * org.apache.flink.api.common.state.ValueState
+     * {@link State} interface for partitioned single-value state. The value can be retrieved or
+     * updated.
+     *
+     * <p>The state is accessed and modified by user functions, and checkpointed consistently
+     * by the system as part of the distributed snapshots.
+     *
+     * <p>The state is only accessible by functions applied on a {@code KeyedStream}. The key is
+     * automatically supplied by the system, so the function always sees the value mapped to the
+     * key of the current element. That way, the system can handle stream and state partitioning
+     * consistently together.
+     *
+     * @param <T> Type of the value in the state.
+     */
     // 创建状态引用对象, 状态引用对象只是提供访问状态的接口，而不会存储状态本身，具体保存工作由状态后端完成
     private ValueState<Double> lastTempState;
     // 阈值

@@ -44,7 +44,7 @@ public class ListCheckpointedFunction007 {
 
         KeyedStream keyedSensorData = sensorData.keyBy(value -> value.getId());
 
-        DataStream<Tuple3<String, Double, Double>> alerts = keyedSensorData
+        DataStream<Tuple2<Integer, Long>> alerts = keyedSensorData
                 .flatMap(new HighTempCounter(50.0));
 
         alerts.print();

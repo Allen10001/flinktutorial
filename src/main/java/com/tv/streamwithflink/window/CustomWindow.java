@@ -157,6 +157,19 @@ public class CustomWindow {
         @Override
         public TriggerResult onEventTime(long time, TimeWindow window, TriggerContext ctx) throws Exception {
             if(time == window.getEnd()){
+                /**
+                 *org.apache.flink.streaming.api.windowing.triggers.TriggerResult#PURGE
+                 *
+                 * All elements in the window are cleared and the window is discarded,
+                 * without evaluating the window function or emitting any elements.
+                 *
+                 * org.apache.flink.streaming.api.windowing.triggers.TriggerResult#FIRE_AND_PURGE
+                 *
+                 * /**
+                 * 	 * {@code FIRE_AND_PURGE} evaluates the window function and emits the window
+                 * 	 * result.
+                 *
+                 */
                 // final evaluation and purge window state
                 return TriggerResult.FIRE_AND_PURGE;
             }else{
@@ -165,6 +178,14 @@ public class CustomWindow {
                 if(temp < window.getEnd()){
                     ctx.registerEventTimeTimer(temp);  // 注册一个计时器
                 }
+
+
+                /**
+                 * org.apache.flink.streaming.api.windowing.triggers.TriggerResult#FIRE
+                 *
+                 * On {@code FIRE}, the window is evaluated and results are emitted.
+                 * The window is not purged, though, all elements are retained.
+                 */
                 // fire trigger to early evaluate window
                 return TriggerResult.FIRE;
             }
