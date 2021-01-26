@@ -34,6 +34,7 @@ public class BroadcastStateFunction {
         env.getCheckpointConfig().setCheckpointInterval(10_000L);
 
         DataStream<SensorReading> originSource = env.addSource(new SensorSource());
+//      System.out.println("parallelism: "+originSource.getParallelism());  // 4
 
         DataStream<SensorReading> sensorData = originSource.assignTimestampsAndWatermarks(WatermarkStrategy
                 .<SensorReading>forBoundedOutOfOrderness(Duration.ofSeconds(5))

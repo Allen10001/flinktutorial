@@ -2,6 +2,7 @@ package com.tv.streamwithflink.flinkstate;
 
 import com.tv.streamwithflink.bean.SensorReading;
 import com.tv.streamwithflink.util.SensorSource;
+import com.tv.streamwithflink.util.SensorSource4StateProcess;
 import org.apache.flink.api.common.eventtime.WatermarkStrategy;
 import org.apache.flink.api.common.restartstrategy.RestartStrategies;
 import org.apache.flink.api.common.state.ValueState;
@@ -56,7 +57,7 @@ public class StateProcessFunction {
         }*/
 
         env.getConfig().setAutoWatermarkInterval(1000L);
-        DataStream<SensorReading> originSource = env.addSource(new SensorSource());
+        DataStream<SensorReading> originSource = env.addSource(new SensorSource4StateProcess());
 
         DataStream<SensorReading> sensorData = originSource.assignTimestampsAndWatermarks(WatermarkStrategy
                 .<SensorReading>forBoundedOutOfOrderness(Duration.ofSeconds(1))
