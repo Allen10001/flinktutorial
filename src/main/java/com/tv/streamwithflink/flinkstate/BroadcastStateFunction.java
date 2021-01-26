@@ -17,16 +17,19 @@ import org.apache.flink.streaming.api.functions.co.KeyedBroadcastProcessFunction
 import org.apache.flink.util.Collector;
 import scala.Tuple3;
 
+import java.io.Serializable;
 import java.time.Duration;
 
 /**
- * @Description 使用联结的广播状态
+ * @Description 使用联结的广播状态  &  serializable test
  * @Author Allen
  * @Date 2020-12-22 20:35
  **/
 public class BroadcastStateFunction {
 
-    public static void main(String[] args) {
+    public static final String serializableTest002Value = "serializableTest002";
+
+    public static void main(String[] args) throws Exception {
         StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
 
         env.setStreamTimeCharacteristic(TimeCharacteristic.EventTime);
@@ -72,9 +75,20 @@ public class BroadcastStateFunction {
          */
         BroadcastStream<ThresholdUpdateBean> broadcastStream = thresholds.broadcast(broadcastStateDescriptor);
 
+
+        UpdateTempAlertsFunction updateTempAlertsFunction = new UpdateTempAlertsFunction(); // serializable test
+//        updateTempAlertsFunction.setSerializableTest002(serializableTest002Value); // serializable test
+
         DataStream<Tuple3<String, Double, Double>> alerts = keyedSensorData
                 .connect(broadcastStream)
-                .process(new UpdateTempAlertsFunction());
+                .process(updateTempAlertsFunction);
+
+        // serializable test, updateTempAlertsFunction 对象传递给 process() 方法之后，
+        // 再set value，也可以 set value 成功，原因可能是因为 env.execute（） 之前，并没有触发task计算，
+        // 所以 process 方法中传递形参 updateTempAlertsFunction 时的序列化对象也并没有传递给 TM,
+        // 最终传递给 TM 的是 env.execute（）之前对 updateTempAlertsFunction 对象进行的所有初始化操作完成后
+        // 的updateTempAlertsFunction对象
+        updateTempAlertsFunction.setSerializableTest002(serializableTest002Value);
 
         alerts.print();
 
@@ -87,6 +101,10 @@ public class BroadcastStateFunction {
     }
 }
 
+/**
+ * the functions need to be serializable: The function may not contain any non-serializable fields,
+ * i.e. types that are not primitive (int, long, double, ...) and not implementing java.io.Serializable.
+ */
 class UpdateTempAlertsFunction extends KeyedBroadcastProcessFunction<String, SensorReading, ThresholdUpdateBean, Tuple3<String, Double, Double>> {
 
     private MapStateDescriptor<String, Double> updateThresholdsDescriptor =
@@ -99,17 +117,34 @@ class UpdateTempAlertsFunction extends KeyedBroadcastProcessFunction<String, Sen
                     "lastTemp",
                     TypeInformation.of(Double.class));
 
+    // ValueState 没有实现序列化接口，需要在open方法中初始化
+    // https://stackoverflow.com/questions/34118469/flink-using-dagger-injections-not-serializable
     private ValueState<Double> lastTempState;
+    private String serializableTest001;
+    private String serializableTest002;
 
+    public UpdateTempAlertsFunction() {
+        System.out.println("serializableTest001 in constructor: "+serializableTest001);
+        System.out.println("serializableTest002 in constructor: "+serializableTest002);
+    }
+
+    public void setSerializableTest002(String serializableTest002) {
+        this.serializableTest002 = serializableTest002;
+    }
 
     @Override
     public void open(Configuration parameters) throws Exception {
         super.open(parameters);
         lastTempState = getRuntimeContext().getState(lastTempStateDescriptor);
+        serializableTest001 = "serializableTest";
     }
 
     @Override
     public void processElement(SensorReading value, ReadOnlyContext ctx, Collector<Tuple3<String, Double, Double>> out) throws Exception {
+
+        System.out.println("serializableTest001: "+serializableTest001);
+        System.out.println("serializableTest002: "+serializableTest002);
+
         ReadOnlyBroadcastState<String, Double> updateThresholdsState = ctx.getBroadcastState(updateThresholdsDescriptor);
         if (lastTempState != null && updateThresholdsState.contains(value.getId())) {
             Double lastTemp = lastTempState.value();
