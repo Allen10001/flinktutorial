@@ -134,12 +134,11 @@ class TempProccessWithSelfCleaningFunction extends KeyedProcessFunction<String, 
         // 删除上一个时间戳位置的 Timer
         if(timerTimestamp.value() != null){
             /**
-             * Registers a timer to be fired when the event time watermark passes the given time.
+             * Deletes the event-time timer with the given trigger time. This method has only an effect if such a timer
+             * was previously registered and did not already expire.
              *
-             * <p>Timers can internally be scoped to keys and/or windows. When you set a timer
-             * in a keyed context, such as in an operation on
-             * {@link org.apache.flink.streaming.api.datastream.KeyedStream} then that context
-             * will also be active when you receive the timer notification.
+             * <p>Timers can internally be scoped to keys and/or windows. When you delete a timer,
+             * it is removed from the current keyed context.
              */
             ctx.timerService().deleteEventTimeTimer(timerTimestamp.value());
         }
