@@ -1,10 +1,14 @@
 package com.tv.streamwithflink.watermark;
 
+import java.nio.charset.StandardCharsets;
 import org.apache.flink.api.common.eventtime.WatermarkStrategy;
+import org.apache.flink.api.common.functions.MapFunction;
 import org.apache.flink.api.common.typeinfo.Types;
+import org.apache.flink.api.java.functions.KeySelector;
 import org.apache.flink.api.java.tuple.Tuple2;
 import org.apache.flink.streaming.api.TimeCharacteristic;
 import org.apache.flink.streaming.api.datastream.DataStream;
+import org.apache.flink.streaming.api.datastream.KeyedStream;
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
 
 import java.time.Duration;
@@ -55,9 +59,24 @@ public class Watermark007 {
                                 // 调用泛型类 WatermarkStrategy<Tuple2<String, Long>> 的withTimestampAssigner() 方法
                                 .withTimestampAssigner((event, timestamp) -> event.f1));
 
+        DataStream<Tuple2<String, byte[]>> dataStream = afterAssignDataStream.map(
+            new MapFunction<Tuple2<String, Long>, Tuple2<String, byte[]>>() {
+                @Override
+                public Tuple2<String, byte[]> map(Tuple2<String, Long> item) throws Exception {
+                    return new Tuple2(item.f0, item.f0.getBytes(StandardCharsets.UTF_8));
+                }
+            });
+
+        KeyedStream<Tuple2<String, byte[]>, String> keyedStream = dataStream.keyBy(new KeySelector<Tuple2<String,byte[]>, String>() {
+            @Override
+            public String getKey(Tuple2<String, byte[]> value) throws Exception {
+                return value.f0;
+            }
+        });
+
         //originStream.print();
-        streamWithKeyAndTime.print();
-        afterAssignDataStream.print();
+        keyedStream.print();
+       // afterAssignDataStream.print();
 
         try {
             env.execute("WatermarkDemo");
