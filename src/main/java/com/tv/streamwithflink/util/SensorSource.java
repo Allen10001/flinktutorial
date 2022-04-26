@@ -22,6 +22,8 @@ public class SensorSource extends RichParallelSourceFunction<SensorReading> {
     @Override
     public void run(SourceContext<SensorReading> ctx) throws Exception {
 
+        System.out.println("getNumberOfParallelSubtasks"+this.getRuntimeContext().getNumberOfParallelSubtasks());
+
         Integer taskIdx = this.getRuntimeContext().getIndexOfThisSubtask();
         List<Tuple2<String, Double>> curFTempList = Lists.newArrayList();
 
@@ -41,7 +43,7 @@ public class SensorSource extends RichParallelSourceFunction<SensorReading> {
             Long cur = Calendar.getInstance().getTimeInMillis();
             curFTempList.forEach(t -> ctx.collect(new SensorReading(t.f0, cur, t.f1)));
 
-            Thread.sleep(200);
+            Thread.sleep(1000);
         }
     }
 
